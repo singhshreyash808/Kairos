@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KAIROS | EarthCore 2D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        body, #map { position: absolute; inset: 0; margin: 0; background: #020617; }
+        .glass-ui { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+        .active-pill { background: #0ea5e9; color: white; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="absolute top-6 left-6 bottom-6 w-72 z-[1000] glass-ui rounded-[2.5rem] p-6 flex flex-col shadow-2xl">
+        <div class="mb-10">
+            <h2 class="text-2xl font-black italic text-white tracking-tighter">KAIROS<span class="text-sky-500">.</span></h2>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Orbital Link Active</p>
+            </div>
+        </div>
+
+        <div class="space-y-6 flex-1">
+            <section>
+                <h3 class="text-[10px] text-slate-500 font-bold uppercase mb-3">Analysis Layers</h3>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="updateMap('NDVI', this)" class="nav-btn text-left p-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/5 transition active-pill">Vegetation (NDVI)</button>
+                    <button onclick="updateMap('EVI', this)" class="nav-btn text-left p-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/5 transition">Dense Forest (EVI)</button>
+                    <button onclick="updateMap('WATER', this)" class="nav-btn text-left p-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/5 transition">Water (NDWI)</button>
+                    <button onclick="updateMap('NDBI', this)" class="nav-btn text-left p-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-white/5 transition">Urban (NDBI)</button>
+                </div>
+            </section>
+        </div>
+
+        <button onclick="location.href='/'" class="w-full py-4 text-[10px] font-bold text-slate-400 border border-slate-800 rounded-2xl hover:text-white transition">EXIT ENGINE</button>
+    </div>
+
+    <div class="absolute top-6 right-6 z-[1000] glass-ui px-6 py-3 rounded-full flex items-center gap-6">
+        <div class="text-[10px]"><span class="text-slate-500 uppercase font-bold">Satellite:</span> <span class="text-white ml-1">LANDSAT 8</span></div>
+        <div class="text-[10px]"><span class="text-slate-500 uppercase font-bold">Target:</span> <span id="target-coords" class="text-white ml-1">...</span></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const lat = localStorage.getItem("k_lat");
+        const lon = localStorage.getItem("k_lon");
+        let mode = localStorage.getItem("k_mode");
+
+        document.getElementById('target-coords').innerText = `${lat}, ${lon}`;
+
+        const map = L.map('map', { zoomControl: false }).setView([lat, lon], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        let satelliteLayer = null;
+
+        async function updateMap(newMode, btn) {
+            if(btn) {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-pill'));
+                btn.classList.add('active-pill');
+            }
+            
+            try {
+                const res = await fetch(`/api/gee-tiles?lat=${lat}&lon=${lon}&mode=${newMode}`);
+                const data = await res.json();
+                
+                if (satelliteLayer) map.removeLayer(satelliteLayer);
+                satelliteLayer = L.tileLayer(data.url, { opacity: 0.8 }).addTo(map);
+            } catch (e) { console.error("Tile fetch failed", e); }
+        }
+
+        window.onload = () => updateMap(mode);
+    </script>
+</body>
+</html>

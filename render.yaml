@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: satellite-kairos
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn App:app
+    envVars:
+      - key: GEE_SERVICE_ACCOUNT
+        sync: false
+      - key: GEE_JSON_KEY
+        sync: false

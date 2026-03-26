@@ -16,14 +16,27 @@ CORS(app)
 # 2. GOOGLE EARTH ENGINE AUTH
 SERVICE_ACCOUNT = os.getenv('GEE_SERVICE_ACCOUNT')
 KEY_FILE = os.path.join(current_dir, 'private-key.json')
+GEE_JSON_KEY = os.getenv('GEE_JSON_KEY')
 
 try:
     if os.path.exists(KEY_FILE):
         credentials = ee.ServiceAccountCredentials(SERVICE_ACCOUNT, KEY_FILE)
         ee.Initialize(credentials)
-        print("✅ SUCCESS: KAIROS Backend Linked to Earth Engine")
+        print("✅ SUCCESS: KAIROS Backend Linked to Earth Engine (via local key)")
+    elif GEE_JSON_KEY:
+        import json
+        import tempfile
+        # Create a temporary file for the credentials JSON
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tf:
+            tf.write(GEE_JSON_KEY)
+            temp_key_path = tf.name
+        
+        credentials = ee.ServiceAccountCredentials(SERVICE_ACCOUNT, temp_key_path)
+        ee.Initialize(credentials)
+        os.unlink(temp_key_path) # Clean up
+        print("✅ SUCCESS: KAIROS Backend Linked to Earth Engine (via environment variable)")
     else:
-        print("❌ ERROR: private-key.json not found in backend folder")
+        print("❌ ERROR: private-key.json not found and GEE_JSON_KEY env var not set")
 except Exception as e:
     print(f"❌ AUTHENTICATION FAILED: {e}")
 
